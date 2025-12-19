@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>OmniTrack</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- React -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+
+  <body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      function App() {
+        const [activeTab, setActiveTab] = React.useState("operations");
+        const [selectedAsset, setSelectedAsset] = React.useState(null);
+
+        const [assets, setAssets] = React.useState([
+          {
+            id: "asset-001",
+            name: "Wheelchair #12",
+            type: "wheelchair",
+            floor: 1,
+            lastSeen: new Date(),
+            status: "active",
+            battery: 85,
+          },
+          {
+            id: "asset-002",
+            name: "Stretcher #5",
+            type: "stretcher",
+            floor: 1,
+            lastSeen: new Date(),
+            status: "active",
+            battery: 92,
+          },
+          {
+            id: "asset-003",
+            name: "IV Pump #23",
+            type: "equipment",
+            floor: 2,
+            lastSeen: new Date(),
+            status: "active",
+            battery: 45,
+          },
+          {
+            id: "asset-004",
+            name: "Defibrillator #8",
+            type: "equipment",
+            floor: 1,
+            lastSeen: new Date(),
+            status: "idle",
+            battery: 78,
+          },
+        ]);
+
+        const [alerts] = React.useState([
+          {
+            id: "alert-001",
+            type: "dwell",
+            severity: "warning",
+            message:
+              "Wheelchair #12 dwelling in Emergency Exit for 8 minutes",
+            timestamp: new Date(Date.now() - 120000),
+          },
+          {
+            id: "alert-002",
+            type: "geofence",
+            severity: "critical",
+            message: "IV Pump #23 left Sterile Zone",
+            timestamp: new Date(Date.now() - 300000),
+          },
+          {
+            id: "alert-003",
+            type: "battery",
+            severity: "info",
+            message: "IV Pump #23 battery below 50%",
+            timestamp: new Date(Date.now() - 600000),
+          },
+        ]);
+
+        React.useEffect(() => {
+          const interval = setInterval(() => {
+            setAssets((prev) =>
+              prev.map((a) => ({
+                ...a,
+                lastSeen: new Date(),
+              }))
+            );
+          }, 3000);
+          return () => clearInterval(interval);
+        }, []);
+
+        const getIcon = (type) => {
+          if (type === "wheelchair") return "♿";
+          if (type === "stretcher") return "🛏️";
+          if (type === "equipment") return "⚕️";
+          return "📍";
+        };
+
+        const formatTime = (date) => {
+          const diff = Math.floor((Date.now() - date) / 1000);
+          if (diff < 60) return `${diff}s ago`;
+          if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+          return `${Math.floor(diff / 3600)}h ago`;
+        };
+
+        const severityColor = (s) => {
+          if (s === "critical") return "border-red-500 bg-red-100 text-red-800";
+          if (s === "warning")
+            return "border-yellow-500 bg-yellow-100 text-yellow-800";
+          return "border-blue-500 bg-blue-100 text-blue-800";
+        };
+
+        return (
+          <div className="min-h-screen">
+            {/* Header */}
+            <header className="bg-white border-b shadow-sm px-6 py-4 flex justify-between">
+              <h1 className="text-2xl font-bold">OmniTrack</h1>
+              <span className="text-sm text-gray-500">
+                {assets.length} assets tracked
+              </span>
+            </header>
+
+            {/* Tabs */}
+            <div className="bg-white border-b px-6 flex space-x-6">
+              {["operations", "admin"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`py-4 border-b-2 ${
+                    activeTab === tab
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500"
+                  }`}
+                >
+                  {tab.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            {/* Operations */}
+            {activeTab === "operations" && (
+              <div className="grid grid-cols-12 gap-6 p-6">
+                {/* Map */}
+                <div className="col-span-8 bg-white border rounded p-4 h-[500px] relative">
+                  <h2 className="font-semibold mb-2">Live Asset Positions</h2>
+
+                  {assets.map((a, i) => (
+                    <div
+                      key={a.id}
+                      onClick={() => setSelectedAsset(a)}
+                      className="absolute cursor-pointer"
+                      style={{
+                        left: `${20 + i * 15}%`,
+                        top: `${40 + (i % 2) * 20}%`,
+                      }}
+                    >
+                      <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-xl shadow animate-pulse">
+                        {getIcon(a.type)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Alerts */}
+                <div className="col-span-4 bg-white border rounded">
+                  <div className="p-4 border-b font-semibold">
+                    Active Alerts ({alerts.length})
+                  </div>
+                  {alerts.map((a) => (
+                    <div
+                      key={a.id}
+                      className={`p-4 border-l-4 ${severityColor(
+                        a.severity
+                      )}`}
+                    >
+                      <p className="text-sm font-medium">{a.message}</p>
+                      <p className="text-xs text-gray-500">
+                        {formatTime(a.timestamp)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Asset Details */}
+                {selectedAsset && (
+                  <div className="col-span-12 bg-white border rounded p-4">
+                    <div className="flex justify-between">
+                      <h3 className="font-semibold">
+                        {selectedAsset.name}
+                      </h3>
+                      <button
+                        onClick={() => setSelectedAsset(null)}
+                        className="text-gray-400"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-4 mt-4 text-sm">
+                      <div>Status: {selectedAsset.status}</div>
+                      <div>Floor: {selectedAsset.floor}</div>
+                      <div>Battery: {selectedAsset.battery}%</div>
+                      <div>
+                        Last seen: {formatTime(selectedAsset.lastSeen)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Admin */}
+            {activeTab === "admin" && (
+              <div className="p-6">
+                <div className="bg-white border rounded p-4">
+                  <h2 className="font-semibold mb-2">Asset Management</h2>
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="p-2 text-left">Asset</th>
+                        <th className="p-2">Type</th>
+                        <th className="p-2">Status</th>
+                        <th className="p-2">Battery</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {assets.map((a) => (
+                        <tr key={a.id} className="border-t">
+                          <td className="p-2">{a.name}</td>
+                          <td className="p-2">{a.type}</td>
+                          <td className="p-2">{a.status}</td>
+                          <td className="p-2">{a.battery}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>

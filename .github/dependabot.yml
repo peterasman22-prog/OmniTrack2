@@ -1,0 +1,57 @@
+version: 2
+updates:
+  # Enable version updates for npm (Ingestion Service)
+  - package-ecosystem: "npm"
+    directory: "/services/ingestion"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "your-org/backend-team"
+    labels:
+      - "dependencies"
+      - "ingestion-service"
+
+  # Enable version updates for pip (Normalisation Service)
+  - package-ecosystem: "pip"
+    directory: "/services/normalisation"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "your-org/backend-team"
+    labels:
+      - "dependencies"
+      - "normalisation-service"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "your-org/devops-team"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/services/ingestion"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "your-org/devops-team"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/services/normalisation"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "your-org/devops-team"
+    labels:
+      - "dependencies"
+      - "docker"
