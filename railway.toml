@@ -1,0 +1,17 @@
+# ─── OmniTrack Platform - Railway Configuration ─────────────────────────────
+# This file configures how Railway builds and deploys the OmniTrack platform.
+# Each service is configured independently in the Railway dashboard.
+# This root config provides default settings.
+#
+# IMPORTANT: Railway uses a monorepo setup. Each service must be created
+# separately in the Railway dashboard pointing to the same GitHub repo
+# but with different root directories.
+
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
