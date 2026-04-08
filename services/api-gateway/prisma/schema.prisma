@@ -1,0 +1,165 @@
+// OmniTrack Data Model
+// Prisma schema for PostgreSQL with PostGIS support
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Venues ────────────────────────────────────────────────────────────────────
+
+model Venue {
+  id        String   @id @default(uuid())
+  name      String
+  tenantId  String   @map("tenant_id")
+  address   String?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  floors Floor[]
+  assets Asset[]
+  alerts Alert[]
+
+  @@index([tenantId])
+  @@map("venues")
+}
+
+model Floor {
+  id      String @id @default(uuid())
+  venueId String @map("venue_id")
+  name    String
+  level   Int
+  mapUrl  String? @map("map_url")
+  minX    Float?  @map("min_x")
+  minY    Float?  @map("min_y")
+  maxX    Float?  @map("max_x")
+  maxY    Float?  @map("max_y")
+
+  venue Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  zones Zone[]
+
+  @@index([venueId])
+  @@map("floors")
+}
+
+model Zone {
+  id       String @id @default(uuid())
+  name     String
+  floorId  String @map("floor_id")
+  type     String @default("area") // area, room, restricted, parking, other
+  geometry Json   // GeoJSON geometry
+  capacity Int?
+  metadata Json?
+
+  floor Floor @relation(fields: [floorId], references: [id], onDelete: Cascade)
+
+  @@index([floorId])
+  @@map("zones")
+}
+
+// ─── Assets & Device Twins ─────────────────────────────────────────────────────
+
+model Asset {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   @default("other") // cart, pallet, badge, equipment, other
+  deviceId  String?  @map("device_id")
+  tenantId  String   @map("tenant_id")
+  venueId   String?  @map("venue_id")
+  metadata  Json?
+  status    String   @default("active") // active, inactive, maintenance
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  venue      Venue?      @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  deviceTwin DeviceTwin?
+  alerts     Alert[]
+
+  @@index([tenantId])
+  @@index([deviceId])
+  @@index([venueId])
+  @@map("assets")
+}
+
+model DeviceTwin {
+  id             String   @id @default(uuid())
+  deviceId       String   @unique @map("device_id")
+  tenantId       String   @map("tenant_id")
+  vendor         String
+  assetId        String?  @unique @map("asset_id")
+  venueId        String?  @map("venue_id")
+  floorId        String?  @map("floor_id")
+  x              Float?
+  y              Float?
+  z              Float?
+  lat            Float?
+  lon            Float?
+  accuracy       Float?
+  battery        Int?
+  signalStrength Int?     @map("signal_strength")
+  lastSeen       DateTime? @map("last_seen")
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  asset Asset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([venueId])
+  @@index([lastSeen])
+  @@map("device_twins")
+}
+
+// ─── Telemetry ─────────────────────────────────────────────────────────────────
+
+model TelemetryEvent {
+  id        String   @id @default(uuid())
+  deviceId  String   @map("device_id")
+  tenantId  String   @map("tenant_id")
+  vendorId  String   @map("vendor_id")
+  timestamp DateTime
+  x         Float?
+  y         Float?
+  z         Float?
+  floorId   String?  @map("floor_id")
+  accuracy  Float?
+  rawPayload Json?   @map("raw_payload")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([deviceId, timestamp])
+  @@index([tenantId, timestamp])
+  @@index([timestamp])
+  @@map("telemetry_events")
+}
+
+// ─── Alerts ────────────────────────────────────────────────────────────────────
+
+model Alert {
+  id             String   @id @default(uuid())
+  type           String   @default("custom") // dwell, geofence, capacity, battery, custom
+  severity       String   @default("info")   // info, warning, critical
+  status         String   @default("active") // active, acknowledged, resolved
+  assetId        String?  @map("asset_id")
+  venueId        String   @map("venue_id")
+  zone           String?
+  message        String
+  details        Json?
+  triggeredAt    DateTime @default(now()) @map("triggered_at")
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  acknowledgedBy String?  @map("acknowledged_by")
+  resolvedAt     DateTime? @map("resolved_at")
+
+  asset Asset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  venue Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId, status])
+  @@index([assetId])
+  @@index([triggeredAt])
+  @@map("alerts")
+}
