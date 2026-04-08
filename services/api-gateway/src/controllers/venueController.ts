@@ -189,6 +189,19 @@ export class VenueController {
         include: { deviceTwin: true },
       });
 
+      // Resolve floor names
+      const floorIds = assets
+        .map((a) => a.deviceTwin?.floorId)
+        .filter((id): id is string => !!id);
+      const uniqueFloorIds = [...new Set(floorIds)];
+      const floors = uniqueFloorIds.length > 0
+        ? await prisma.floor.findMany({
+            where: { id: { in: uniqueFloorIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+      const floorMap = new Map(floors.map((f) => [f.id, f.name]));
+
       const positions = assets
         .filter((a) => a.deviceTwin && a.deviceTwin.x !== null)
         .map((a) => ({
@@ -201,7 +214,7 @@ export class VenueController {
             lat: a.deviceTwin!.lat,
             lon: a.deviceTwin!.lon,
           },
-          floor: a.deviceTwin!.floorId || '',
+          floor: (a.deviceTwin!.floorId ? floorMap.get(a.deviceTwin!.floorId) : '') || '',
           accuracy: a.deviceTwin!.accuracy,
           timestamp: a.deviceTwin!.lastSeen?.toISOString() || '',
         }));

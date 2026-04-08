@@ -33,4 +33,5 @@ export interface AssetWithPosition extends Asset {
   position?: AssetPosition;
   battery?: number;
   lastSeen?: string;
+  venueName?: string;
 }

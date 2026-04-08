@@ -19,6 +19,7 @@ export class AssetController {
       const assets = await prisma.asset.findMany({
         where,
         include: {
+          venue: { select: { id: true, name: true } },
           deviceTwin: {
             select: {
               deviceId: true,
@@ -37,16 +38,31 @@ export class AssetController {
         orderBy: { updatedAt: 'desc' },
       });
 
+      // Resolve floor names for assets that have a floorId
+      const floorIds = assets
+        .map((a) => a.deviceTwin?.floorId)
+        .filter((id): id is string => !!id);
+      const uniqueFloorIds = [...new Set(floorIds)];
+      const floors = uniqueFloorIds.length > 0
+        ? await prisma.floor.findMany({
+            where: { id: { in: uniqueFloorIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+      const floorMap = new Map(floors.map((f) => [f.id, f.name]));
+
       // Map to frontend expected format with position
       const result = assets.map((asset) => {
-        const { deviceTwin, ...rest } = asset;
+        const { deviceTwin, venue, ...rest } = asset;
+        const floorName = deviceTwin?.floorId ? floorMap.get(deviceTwin.floorId) || '' : '';
         return {
           ...rest,
+          venueName: venue?.name || '',
           position: deviceTwin ? {
             assetId: asset.id,
             deviceId: deviceTwin.deviceId,
             position: { x: deviceTwin.x || 0, y: deviceTwin.y || 0, z: deviceTwin.z },
-            floor: deviceTwin.floorId || '',
+            floor: floorName,
             accuracy: deviceTwin.accuracy,
             timestamp: deviceTwin.lastSeen?.toISOString() || '',
           } : undefined,
@@ -155,6 +171,16 @@ export class AssetController {
         throw new AppError('No position data available for this asset', 404);
       }
 
+      // Resolve floor name
+      let floorName = '';
+      if (asset.deviceTwin.floorId) {
+        const floor = await prisma.floor.findUnique({
+          where: { id: asset.deviceTwin.floorId },
+          select: { name: true },
+        });
+        floorName = floor?.name || '';
+      }
+
       const position = {
         assetId: asset.id,
         deviceId: asset.deviceTwin.deviceId,
@@ -165,7 +191,7 @@ export class AssetController {
           lat: asset.deviceTwin.lat,
           lon: asset.deviceTwin.lon,
         },
-        floor: asset.deviceTwin.floorId || '',
+        floor: floorName,
         accuracy: asset.deviceTwin.accuracy,
         timestamp: asset.deviceTwin.lastSeen?.toISOString() || '',
       };

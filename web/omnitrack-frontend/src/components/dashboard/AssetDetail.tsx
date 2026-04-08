@@ -39,7 +39,7 @@ export default function AssetDetail({ asset, onClose }: AssetDetailProps) {
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-3">
           <InfoItem icon={Tag} label="Device ID" value={asset.deviceId} />
-          <InfoItem icon={Radio} label="Venue" value={asset.venueId.slice(0, 8) + '…'} />
+          <InfoItem icon={Radio} label="Venue" value={asset.venueName || 'Unknown'} />
           {pos && (
             <>
               <InfoItem
