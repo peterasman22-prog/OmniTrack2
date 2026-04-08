@@ -1,0 +1,98 @@
+# OmniTrack Platform - Docker Compose
+# Run: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # ─── Infrastructure ────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: omnitrack-postgres
+    environment:
+      POSTGRES_DB: omnitrack
+      POSTGRES_USER: omnitrack
+      POSTGRES_PASSWORD: omnitrack
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-EXEC', 'pg_isready -U omnitrack']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: omnitrack-nats
+    ports:
+      - '4222:4222'
+      - '8222:8222'
+    command: ['--jetstream', '--http_port', '8222']
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', 'http://localhost:8222/healthz']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Application Services ──────────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: omnitrack-api-gateway
+    ports:
+      - '4000:4000'
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgresql://omnitrack:omnitrack@postgres:5432/omnitrack?schema=public
+      NATS_URL: nats://nats:4222
+      AUTH_ENABLED: 'false'
+      CORS_ORIGIN: http://localhost:3000
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ingestion-service:
+    build:
+      context: ./services/ingestion-service
+      dockerfile: Dockerfile
+    container_name: omnitrack-ingestion
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      NATS_URL: nats://nats:4222
+      AUTH_ENABLED: 'false'
+      LOG_LEVEL: info
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+
+  normalization-service:
+    build:
+      context: ./services/normalization-service
+      dockerfile: Dockerfile
+    container_name: omnitrack-normalization
+    environment:
+      NODE_ENV: development
+      NATS_URL: nats://nats:4222
+      NATS_TOPIC_RAW: telemetry.raw
+      NATS_TOPIC_NORMALIZED: telemetry.normalized
+      LOG_LEVEL: info
+    depends_on:
+      nats:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
