@@ -29,9 +29,8 @@ RUN npm ci --omit=dev
 RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
-
-# Create startup script
-RUN printf '#!/bin/sh\nset -e\necho "Running Prisma migrations..."\nnpx prisma migrate deploy || echo "Migration warning (continuing)"\necho "Starting API Gateway..."\nexec node dist/server.js\n' > /app/start.sh && chmod +x /app/start.sh
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 # Set proper permissions before switching user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
