@@ -42,5 +42,5 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
 
-# Use db push to sync schema, then start server
-CMD ["sh", "-c", "echo 'Pushing DB schema...' && npx prisma db push --accept-data-loss 2>&1 && echo 'Starting server...' && node dist/server.js"]
+# Database tables already created manually - just start the server
+CMD ["node", "dist/server.js"]
