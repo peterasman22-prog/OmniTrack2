@@ -25,7 +25,8 @@ Thumbs.db
 logs/
 *.log
 
-# Prisma (migrations should be tracked)
+# Prisma migrations (using db push instead)
+services/api-gateway/prisma/migrations/
 
 # Coverage
 coverage/
