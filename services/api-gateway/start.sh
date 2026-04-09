@@ -1,8 +1,11 @@
 #!/bin/sh
 echo "=== OmniTrack API Gateway Starting ==="
+echo "Database URL host: ${DATABASE_URL%%@*}"
+echo "PORT: $PORT"
 
-echo "Syncing database schema with Prisma db push..."
-npx prisma db push --accept-data-loss 2>&1
+echo "Pushing database schema..."
+npx prisma db push --skip-generate 2>&1
+echo "Schema push complete."
 
-echo "Starting API Gateway server..."
+echo "Starting server on port ${PORT:-4000}..."
 exec node dist/server.js
