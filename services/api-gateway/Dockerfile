@@ -29,8 +29,6 @@ RUN npm ci --omit=dev
 RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
 
 # Set proper permissions before switching user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
@@ -44,4 +42,5 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
 
-CMD ["/app/start.sh"]
+# Use db push to sync schema, then start server
+CMD ["sh", "-c", "echo 'Pushing DB schema...' && npx prisma db push --accept-data-loss 2>&1 && echo 'Starting server...' && node dist/server.js"]
