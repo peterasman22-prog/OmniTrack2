@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-package-lock.json
+# package-lock.json  # Needed for Railway deployment (npm ci)
 
 # Build output
 dist/
